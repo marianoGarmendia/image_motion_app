@@ -51,7 +51,7 @@ const corsOptions = {
 };
 
 const app = express();
-const port = 3500;
+const port = process.env.port || 3500;
 // Load environment variables from .env file
 app.use(cors(corsOptions)); // Habilitar CORS para todas las rutas y métodos
 app.use(express.json());
