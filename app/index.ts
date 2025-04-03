@@ -5,7 +5,7 @@ import multer from "multer";
 import { fileURLToPath } from "url";
 import path, { dirname } from "path";
 import fs from "fs-extra";
-import { get_status_media } from "./pixelcut-api.js";
+// import { get_status_media } from "./pixelcut-api.js";
 // import FormData from "form-data"; // Asegúrate de instalar form-data si no lo tienes ya
 // import fetch from "node-fetch"; // Si usas node-fetch en Node.js
 
@@ -152,7 +152,7 @@ app.post("/remove-background", async (req, res) => {
   
       // Paso 3: Crear animación
       const image_id_motion = await create_motion_fetch(imageToMotion);
-      const delay = (ms) => new Promise((res) => setTimeout(res, ms));
+      const delay = (ms:number) => new Promise((res) => setTimeout(res, ms));
       let processing = true;
   
       while (processing) {
@@ -184,12 +184,12 @@ app.post("/remove-background", async (req, res) => {
     }
   });
 
-export const create_motion = async ({ id }) => {
+export const create_motion = async ({ id }:{id:string}) => {
   const resp = await fetch(`https://api.vimmerse.net/media/${id}`, {
     method: "GET",
-    headers: {
-      "X-Api-Key": VIMMERSE_API_KEY,
-    },
+     headers : new Headers( {
+      "X-Api-Key": VIMMERSE_API_KEY || "",
+    }),
   });
 
   const data = await resp.text();
@@ -227,9 +227,9 @@ export const create_motion_fetch = async (imageUrl: string) => {
     form.append("motion_type", "LumaAI");
 
     // Configurar los encabezados de la solicitud
-    const headers = {
-      "X-Api-Key": VIMMERSE_API_KEY, // Tu clave de API para la autenticación
-    };
+    const headers = new Headers({
+      "X-Api-Key": VIMMERSE_API_KEY || "", // Tu clave de API para la autenticación
+    });
 
     // Realizar la solicitud POST a la API de Vimmerse
     const apiResponse = await fetch("https://api.vimmerse.net/media", {
@@ -246,6 +246,25 @@ export const create_motion_fetch = async (imageUrl: string) => {
     console.error("Error al procesar la imagen:", error);
   }
 };
+
+const get_status_media = async ({id}:{id:string}) => {
+    try {
+        const resp = await fetch(
+            `https://api.vimmerse.net/media/${id}/processing-status`,
+            {method: 'GET'}
+          );
+          
+          const data = await resp.text();
+        const dataJson = JSON.parse(data);
+          console.log(data);
+          return dataJson;
+        
+    } catch (error) {
+        console.error("Error al obtener el estado del medio:", error);
+        throw error; // Lanza el error para que pueda ser manejado por el llamador
+    }
+
+}
 
 app.listen(port, () => {
   console.log(`Servidor escuchando en http://localhost:${port}`);

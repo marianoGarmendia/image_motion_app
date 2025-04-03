@@ -2,11 +2,16 @@
     "compilerOptions": {
        "noEmit": true, // Optional - see note below
        "lib": ["ESNext", "DOM"],
+       "outDir": "./dist",
+       "rootDir": "./app",
+       "strict": true,
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "bundler",
        "rewriteRelativeImportExtensions": true,
        "erasableSyntaxOnly": true,
        "verbatimModuleSyntax": false
-    }
+    },
+    "include": ["app/**/*"],
+    "exclude": ["node_modules"]
   } 
