@@ -169,7 +169,7 @@ app.post("/remove-background", async (req, res) => {
   
       if (image_motion?.data?.result?.length > 0) {
          res.json({
-          result_url: image_motion.result[0].url,
+          result_url: image_motion.data.result[0].url,
           type: "video",
         });
         return
