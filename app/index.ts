@@ -44,7 +44,7 @@ const upload = multer({ storage });
 
 // Habilitar CORS correctamente para solicitudes preflight
 const corsOptions = {
-  origin: "*", // Cambia esto según sea necesario
+  origin: ["https://image-generation-zl38.onrender.com", "http://localhost:5174"], // Cambia esto según sea necesario
   methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true, // Permitir credenciales si es necesario
