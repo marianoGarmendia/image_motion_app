@@ -87,38 +87,37 @@ app.post("/upload-image", upload.single("image"), async (req, res) => {
 });
 
 app.post("/remove-background", async (req, res) => {
-    const { fileName, background, animation } = req.body;
-  
-    if (!fileName) {
-      res.status(400).json({ error: "El nombre del archivo es requerido" });
-      return
-    }
-  
-    const imageUrl = `https://imagemotionapp-production.up.railway.app/images/${fileName}`;
-  
-    try {
-      // Paso 1: Remover fondo
-      const response = await axios.post(
-        "https://api.developer.pixelcut.ai/v1/remove-background",
-        {
-          image_url: imageUrl,
-          format: "png",
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-            "X-API-KEY": PIXELCUT_API_KEY,
-          },
-        }
-      );
-  
-      const result_url = response.data.result_url;
-      
-      let imageToMotion = result_url;
+  const { fileName, background, animation } = req.body;
 
-      if(background) {
-  
+  if (!fileName) {
+    res.status(400).json({ error: "El nombre del archivo es requerido" });
+    return;
+  }
+
+  const imageUrl = `https://imagemotionapp-production.up.railway.app/images/${fileName}`;
+
+  try {
+    // Paso 1: Remover fondo
+    const response = await axios.post(
+      "https://api.developer.pixelcut.ai/v1/remove-background",
+      {
+        image_url: imageUrl,
+        format: "png",
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          "X-API-KEY": PIXELCUT_API_KEY,
+        },
+      }
+    );
+
+    const result_url = response.data.result_url;
+
+    let imageToMotion = result_url;
+
+    if (background) {
       // Paso 2: Generar nuevo fondo
       const responseBg = await axios.post(
         "https://api.developer.pixelcut.ai/v1/generate-background",
@@ -141,53 +140,55 @@ app.post("/remove-background", async (req, res) => {
           },
         }
       );
-  
+
       imageToMotion = responseBg.data.result_url;
     }
-      // Si no se quiere animación, devolver directamente la imagen
-      if (!animation) {
-         res.json({ result_url: imageToMotion, type: "image" });
-         return
-      }
-  
-      // Paso 3: Crear animación
-      const image_id_motion = await create_motion_fetch(imageToMotion);
-      const delay = (ms:number) => new Promise((res) => setTimeout(res, ms));
-      let processing = true;
-  
-      while (processing) {
-        await delay(30000); // 30 segundos
-        const status = await get_status_media({ id: image_id_motion.data.id });
-        if (status.data.processing_status === "success") {
-          processing = false;
-        } else {
-          console.log("Procesando...");
-        }
-      }
-  
-      const image_motion = await create_motion({ id: image_id_motion.data.id });
-  
-      if (image_motion?.data?.result?.length > 0) {
-         res.json({
-          result_url: image_motion.data.result[0].url,
-          type: "video",
-        });
-        return
-      } else {
-        res.status(400).json({ error: "No se encontró el resultado de la animación." });
-        return
-      }
-    } catch (error) {
-      console.error("Error en el proceso:", error);
-      res.status(500).json({ error: "Ocurrió un error al procesar la imagen." });
-      return
+    // Si no se quiere animación, devolver directamente la imagen
+    if (!animation) {
+      res.json({ result_url: imageToMotion, type: "image" });
+      return;
     }
-  });
 
-export const create_motion = async ({ id }:{id:string}) => {
+    // Paso 3: Crear animación
+    const image_id_motion = await create_motion_fetch(imageToMotion);
+    const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
+    let processing = true;
+
+    while (processing) {
+      await delay(30000); // 30 segundos
+      const status = await get_status_media({ id: image_id_motion.data.id });
+      if (status.data.processing_status === "success") {
+        processing = false;
+      } else {
+        console.log("Procesando...");
+      }
+    }
+
+    const image_motion = await create_motion({ id: image_id_motion.data.id });
+
+    if (image_motion?.data?.result?.length > 0) {
+      res.json({
+        result_url: image_motion.data.result[0].url,
+        type: "video",
+      });
+      return;
+    } else {
+      res
+        .status(400)
+        .json({ error: "No se encontró el resultado de la animación." });
+      return;
+    }
+  } catch (error) {
+    console.error("Error en el proceso:", error);
+    res.status(500).json({ error: "Ocurrió un error al procesar la imagen." });
+    return;
+  }
+});
+
+export const create_motion = async ({ id }: { id: string }) => {
   const resp = await fetch(`https://api.vimmerse.net/media/${id}`, {
     method: "GET",
-     headers : new Headers( {
+    headers: new Headers({
       "X-Api-Key": VIMMERSE_API_KEY || "",
     }),
   });
@@ -216,15 +217,15 @@ export const create_motion_fetch = async (imageUrl: string) => {
     // Agregar otros datos al FormData
     form.append(
       "prompt",
-      `Un [producto] sobre un fondo neutral. La cámara aplica un suave zoom-in mientras la camara realiza una rotación leve simple enfocando el producto, destacando sus características principales.
-      -  No agregues textos, marcas, ni logos, mantenlo limpio y profesional para un fondo de producto.
-        - No modifiques la forma del producto.
-        - No cambies nada de las caracteristicas del producto, ni el color, ni el texto escrito.
-        - Manten siempre el foco en el producto y que se destaque.
-        - No agregues elementos extra.
+      `Animate an image of [product] against a neutral background, applying a gentle zoom-in and a 90-degree rotation, highlighting its main features with soft lighting.
+    - Do not add text, trademarks, or logos; keep it clean and professional for a product backdrop.
+    - Do not alter the product's shape.
+    - Do not change any of the product's characteristics, including color or written text.
+    - Always keep the focus on the product, ensuring it stands out.
+    - Do not add extra elements.
       `
     );
-    form.append("motion_type", "LumaAI");
+    form.append("motion_type", "KlingAI");
 
     // Configurar los encabezados de la solicitud
     const headers = new Headers({
@@ -247,24 +248,22 @@ export const create_motion_fetch = async (imageUrl: string) => {
   }
 };
 
-const get_status_media = async ({id}:{id:string}) => {
-    try {
-        const resp = await fetch(
-            `https://api.vimmerse.net/media/${id}/processing-status`,
-            {method: 'GET'}
-          );
-          
-          const data = await resp.text();
-        const dataJson = JSON.parse(data);
-          console.log(data);
-          return dataJson;
-        
-    } catch (error) {
-        console.error("Error al obtener el estado del medio:", error);
-        throw error; // Lanza el error para que pueda ser manejado por el llamador
-    }
+const get_status_media = async ({ id }: { id: string }) => {
+  try {
+    const resp = await fetch(
+      `https://api.vimmerse.net/media/${id}/processing-status`,
+      { method: "GET" }
+    );
 
-}
+    const data = await resp.text();
+    const dataJson = JSON.parse(data);
+    console.log(data);
+    return dataJson;
+  } catch (error) {
+    console.error("Error al obtener el estado del medio:", error);
+    throw error; // Lanza el error para que pueda ser manejado por el llamador
+  }
+};
 
 app.listen(port, () => {
   console.log(`Servidor escuchando en http://localhost:${port}`);
