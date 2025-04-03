@@ -1,0 +1,12 @@
+{
+    "compilerOptions": {
+       "noEmit": true, // Optional - see note below
+       "lib": ["ESNext", "DOM"],
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+       "rewriteRelativeImportExtensions": true,
+       "erasableSyntaxOnly": true,
+       "verbatimModuleSyntax": false
+    }
+  } 
