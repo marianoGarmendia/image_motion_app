@@ -19,9 +19,11 @@ const __dirname = dirname(__filename);
 
 // Guardar archivos de imagen entrantes
 
-const uploadDir = path.join(__dirname, "../upload-images");
+const uploadDir = path.join(process.cwd(), "upload-images");
 const contentDir = path.join(__dirname, "../content-generated");
 const tempDir = path.join(__dirname, "../temp");
+
+
 
 fs.ensureDirSync("upload-images"); // crea la carpeta si no existe
 fs.ensureDirSync("content-generated"); // crea la carpeta si no existe
@@ -61,14 +63,14 @@ app.use(express.urlencoded({ extended: true }));
 // app.options('*', cors(corsOptions));  // Permitir el preflight para todos los métodos
 
 // Servir archivos estáticos (por ejemplo, imágenes)
-app.use("/images", express.static(path.join(__dirname, "../upload-images")));
+app.use("/images", express.static(uploadDir));
 app.use(
   "/content-generated",
   express.static(path.join(__dirname, "../content-generated"))
 );
 
 app.post("/upload-image", upload.single("image"), async (req, res) => {
-  console.log(req);
+  
 
   if (!req.file) {
     res.status(400).json({ error: "No se envió ninguna imagen." });
