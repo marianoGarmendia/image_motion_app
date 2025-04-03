@@ -44,7 +44,7 @@ const upload = multer({ storage });
 
 // Habilitar CORS correctamente para solicitudes preflight
 const corsOptions = {
-  origin: "http://localhost:5173", // Cambia esto según sea necesario
+  origin: "*", // Cambia esto según sea necesario
   methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true, // Permitir credenciales si es necesario
@@ -94,7 +94,7 @@ app.post("/remove-background", async (req, res) => {
       return
     }
   
-    const imageUrl = `https://72jdmlb6-3500.brs.devtunnels.ms/images/${fileName}`;
+    const imageUrl = `https://imagemotionapp-production.up.railway.app/images/${fileName}`;
   
     try {
       // Paso 1: Remover fondo
