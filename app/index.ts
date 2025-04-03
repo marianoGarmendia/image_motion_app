@@ -25,8 +25,6 @@ const uploadDir = path.join(process.cwd(), "upload-images");
 const contentDir = path.join(process.cwd(), "content-generated");
 const tempDir = path.join(__dirname, "../temp");
 
-
-
 fs.ensureDirSync("upload-images"); // crea la carpeta si no existe
 fs.ensureDirSync("content-generated"); // crea la carpeta si no existe
 fs.ensureDirSync("temp"); // crea la carpeta si no existe
@@ -48,7 +46,10 @@ const upload = multer({ storage });
 
 // Habilitar CORS correctamente para solicitudes preflight
 const corsOptions = {
-  origin: ["https://image-generation-zl38.onrender.com", "http://localhost:5174"], // Cambia esto según sea necesario
+  origin: [
+    "https://image-generation-zl38.onrender.com",
+    "http://localhost:5174",
+  ], // Cambia esto según sea necesario
   methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true, // Permitir credenciales si es necesario
@@ -66,14 +67,9 @@ app.use(express.urlencoded({ extended: true }));
 
 // Servir archivos estáticos (por ejemplo, imágenes)
 app.use("/images", express.static(uploadDir));
-app.use(
-  "/content-generated",
-  express.static(contentDir)
-);
+app.use("/content-generated", express.static(contentDir));
 
 app.post("/upload-image", upload.single("image"), async (req, res) => {
-  
-
   if (!req.file) {
     res.status(400).json({ error: "No se envió ninguna imagen." });
     return;
@@ -91,116 +87,129 @@ app.post("/upload-image", upload.single("image"), async (req, res) => {
 });
 
 app.post("/remove-background", async (req, res) => {
-    const { fileName, background, animation } = req.body;
-  
-    if (!fileName) {
-       res.status(400).json({ error: "El nombre del archivo es requerido" });
-       return
-    }
-  
-    const jobId = uuidv4();
-  
-    // Devolver inmediatamente al frontend
-    res.json({ jobId, status: "processing" });
-  
-    // Procesar en segundo plano
-    (async () => {
-      try {
-        const imageUrl = `https://imagemotionapp-production.up.railway.app/images/${fileName}`;
-  
-        // Paso 1: Remover fondo
-        const response = await axios.post("https://api.developer.pixelcut.ai/v1/remove-background", {
+  const { fileName, background, animation } = req.body;
+
+  if (!fileName) {
+    res.status(400).json({ error: "El nombre del archivo es requerido" });
+    return;
+  }
+
+  const jobId = uuidv4();
+
+  // Devolver inmediatamente al frontend
+  res.json({ jobId, status: "processing" });
+
+  // Procesar en segundo plano
+  (async () => {
+    try {
+      const imageUrl = `https://imagemotionapp-production.up.railway.app/images/${fileName}`;
+
+      // Paso 1: Remover fondo
+      const response = await axios.post(
+        "https://api.developer.pixelcut.ai/v1/remove-background",
+        {
           image_url: imageUrl,
           format: "png",
-        }, {
+        },
+        {
           headers: {
             "Content-Type": "application/json",
             Accept: "application/json",
             "X-API-KEY": PIXELCUT_API_KEY,
           },
-        });
-  
-        let result_url = response.data.result_url;
-  
-        // Paso 2: Generar fondo (si corresponde)
-        if (background) {
-          const responseBg = await axios.post("https://api.developer.pixelcut.ai/v1/generate-background", {
+        }
+      );
+
+      let result_url = response.data.result_url;
+
+      // Paso 2: Generar fondo (si corresponde)
+      if (background) {
+        const responseBg = await axios.post(
+          "https://api.developer.pixelcut.ai/v1/generate-background",
+          {
             image_url: result_url,
-            image_transform: { scale: 0.6, x_center: 0.3, y_center: 0.5 },
+            image_transform: { scale: 0.8, x_center: 0.3, y_center: 0.5 },
             scene: null,
-            prompt: "Add a solid, well-lit background that highlights the product. The background should be clean and professional, without distractions..",
+            prompt:
+              "Add a solid, smooth and homogeneous, well-lit background that highlights the product. The background should be clean and professional, without distractions..",
             negative_prompt: "",
-          }, {
+          },
+          {
             headers: {
               "Content-Type": "application/json",
               Accept: "application/json",
               "X-API-KEY": PIXELCUT_API_KEY,
             },
-          });
-  
-          result_url = responseBg.data.result_url;
-        }
-        console.log("URL de la imagen procesada:", result_url);
-        
-        // Si no se quiere animación, guardar como imagen final
-        if (!animation) {
-          const filePath = path.join("content-generated", `${jobId}.json`);
-          await fs.outputJson(filePath, { result_url, type: "image" });
-          return;
-        }
-  
-        // Paso 3: Crear animación
-        const image_id_motion = await create_motion_fetch(result_url);
-  
-        const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
-        let processing = true;
-  
-        while (processing) {
-          await delay(30000);
-          console.log("Esperando 30 segundos para verificar el estado de la animación...");
-          
-          const status = await get_status_media({ id: image_id_motion.data.id });
-          if (status.data.processing_status === "success") {
-            console.log("✅ Proceso de animación completado.");
-            
-            processing = false;
           }
+        );
+
+        result_url = responseBg.data.result_url;
+      }
+      console.log("URL de la imagen procesada:", result_url);
+
+      // Si no se quiere animación, guardar como imagen final
+      if (!animation) {
+        const filePath = path.join("content-generated", `${jobId}.json`);
+        await fs.outputJson(filePath, { result_url, type: "image" });
+        return;
+      }
+
+      // Paso 3: Crear animación
+      const image_id_motion = await create_motion_fetch(result_url);
+
+      const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
+      let processing = true;
+
+      while (processing) {
+        await delay(30000);
+        console.log(
+          "Esperando 30 segundos para verificar el estado de la animación..."
+        );
+
+        const status = await get_status_media({ id: image_id_motion.data.id });
+        if (status.data.processing_status === "success") {
+          console.log("✅ Proceso de animación completado.");
+
+          processing = false;
         }
-  
-        const url_video_motion = await create_motion({ id: image_id_motion.data.id });
-  
-        if (url_video_motion) {
-          await fs.outputJson(path.join("content-generated", `${jobId}.json`), {
-            result_url: url_video_motion,
-            type: "video",
-          });
-        }
-      } catch (error) {
-        console.error("❌ Error en proceso async:", error);
+      }
+
+      const url_video_motion = await create_motion({
+        id: image_id_motion.data.id,
+      });
+
+      if (url_video_motion) {
         await fs.outputJson(path.join("content-generated", `${jobId}.json`), {
-          error: true,
-          message: "Fallo al procesar la imagen.",
+          result_url: url_video_motion,
+          type: "video",
         });
       }
-    })();
-  });
+    } catch (error) {
+      console.error("❌ Error en proceso async:", error);
+      await fs.outputJson(path.join("content-generated", `${jobId}.json`), {
+        error: true,
+        message: "Fallo al procesar la imagen.",
+      });
+    }
+  })();
+});
 
-  app.get("/job/:id", async (req, res) => {
-    const filePath = path.join("content-generated", `${req.params.id}.json`);
-    if (!fs.existsSync(filePath)) {
-      res.json({ status: "processing" });
-      return
-    }
-  
-    const data = await fs.readJson(filePath);
-  
-    if (data.error) {
-      res.status(500).json({ status: "error", message: data.message });
-      return
-    }
-  
-    res.json({ status: "done", ...data });
-  });
+app.get("/job/:id", async (req, res) => {
+  const filePath = path.join("content-generated", `${req.params.id}.json`);
+  if (!fs.existsSync(filePath)) {
+    res.json({ status: "processing" });
+    return;
+  }
+
+  const data = await fs.readJson(filePath);
+
+  if (data.error) {
+    res.status(500).json({ status: "error", message: data.message });
+    return;
+  }
+
+  res.json({ status: "done", ...data });
+});
 
 export const create_motion = async ({ id }: { id: string }) => {
   const resp = await fetch(`https://api.vimmerse.net/media/${id}`, {
@@ -212,13 +221,11 @@ export const create_motion = async ({ id }: { id: string }) => {
 
   const data = await resp.text();
   const dataJson = JSON.parse(data);
-  if(dataJson.data.result && dataJson.data.result.length > 0) {
-  const url_video =  dataJson.data.result[0]?.url 
-  return url_video;
-
+  if (dataJson.data.result && dataJson.data.result.length > 0) {
+    const url_video = dataJson.data.result[0]?.url;
+    return url_video;
   }
-  return  null; // Si no hay resultado, devuelve null
-  
+  return null; // Si no hay resultado, devuelve null
 };
 
 // La función asincrónica para crear la solicitud
@@ -239,12 +246,21 @@ export const create_motion_fetch = async (imageUrl: string) => {
     // Agregar otros datos al FormData
     form.append(
       "prompt",
-      `Animate an image of [product] against a neutral background, applying a gentle zoom-in and a 90-degree rotation, highlighting its main features with soft lighting.
-    - Do not add text, trademarks, or logos; keep it clean and professional for a product backdrop.
-    - Do not alter the product's shape.
-    - Do not change any of the product's characteristics, including color or written text.
-    - Always keep the focus on the product, ensuring it stands out.
-    - Do not add extra elements.
+      `Animate an image of [product] placed against a neutral background. Apply a gentle zoom-in effect while keeping the product fixed in its original position to simulate a 3D perspective. Simultaneously, perform a smooth 90-degree rotation of the product.
+
+        Ensure the product is well lit, with soft lighting and subtle shadows that enhance depth and give a realistic 3D look. Emphasize the product’s key features without altering its original texture, proportions, colors, or details — maintain professional-grade visual integrity.
+
+        Strict guidelines:
+
+        Do not add any text, logos, or trademarks — the scene must remain clean and professional.
+
+        Do not modify the product’s shape or form.
+
+        Do not change any visible characteristics, such as color or any written content on the product.
+
+        Always keep the product as the central focus, ensuring it visually stands out.
+
+        Do not introduce any extra elements into the animation.
       `
     );
     form.append("motion_type", "KlingAI");
@@ -264,7 +280,7 @@ export const create_motion_fetch = async (imageUrl: string) => {
     // Manejar la respuesta de la API
     const data = await apiResponse.json();
     console.log("Respuesta de la API de vimmerse:");
-    
+
     return data;
   } catch (error) {
     console.error("Error al procesar la imagen:", error);
