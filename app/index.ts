@@ -5,6 +5,7 @@ import multer from "multer";
 import { fileURLToPath } from "url";
 import path, { dirname } from "path";
 import fs from "fs-extra";
+import { v4 as uuidv4 } from "uuid";
 // import { get_status_media } from "./pixelcut-api.js";
 // import FormData from "form-data"; // Asegúrate de instalar form-data si no lo tienes ya
 // import fetch from "node-fetch"; // Si usas node-fetch en Node.js
@@ -21,7 +22,7 @@ const __dirname = dirname(__filename);
 // Guardar archivos de imagen entrantes
 
 const uploadDir = path.join(process.cwd(), "upload-images");
-const contentDir = path.join(__dirname, "../content-generated");
+const contentDir = path.join(process.cwd(), "content-generated");
 const tempDir = path.join(__dirname, "../temp");
 
 
@@ -67,7 +68,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/images", express.static(uploadDir));
 app.use(
   "/content-generated",
-  express.static(path.join(__dirname, "../content-generated"))
+  express.static(contentDir)
 );
 
 app.post("/upload-image", upload.single("image"), async (req, res) => {
@@ -90,103 +91,111 @@ app.post("/upload-image", upload.single("image"), async (req, res) => {
 });
 
 app.post("/remove-background", async (req, res) => {
-  const { fileName, background, animation } = req.body;
-
-  if (!fileName) {
-    res.status(400).json({ error: "El nombre del archivo es requerido" });
-    return;
-  }
-
-  const imageUrl = `https://imagemotionapp-production.up.railway.app/images/${fileName}`;
-
-  try {
-    // Paso 1: Remover fondo
-    const response = await axios.post(
-      "https://api.developer.pixelcut.ai/v1/remove-background",
-      {
-        image_url: imageUrl,
-        format: "png",
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          "X-API-KEY": PIXELCUT_API_KEY,
-        },
-      }
-    );
-
-    const result_url = response.data.result_url;
-
-    let imageToMotion = result_url;
-
-    if (background) {
-      // Paso 2: Generar nuevo fondo
-      const responseBg = await axios.post(
-        "https://api.developer.pixelcut.ai/v1/generate-background",
-        {
-          image_url: result_url,
-          image_transform: {
-            scale: 0.6,
-            x_center: 0.5,
-            y_center: 0.5,
-          },
-          scene: background,
-          prompt: "",
-          negative_prompt: "",
-        },
-        {
+    const { fileName, background, animation } = req.body;
+  
+    if (!fileName) {
+       res.status(400).json({ error: "El nombre del archivo es requerido" });
+       return
+    }
+  
+    const jobId = uuidv4();
+  
+    // Devolver inmediatamente al frontend
+    res.json({ jobId, status: "processing" });
+  
+    // Procesar en segundo plano
+    (async () => {
+      try {
+        const imageUrl = `https://imagemotionapp-production.up.railway.app/images/${fileName}`;
+  
+        // Paso 1: Remover fondo
+        const response = await axios.post("https://api.developer.pixelcut.ai/v1/remove-background", {
+          image_url: imageUrl,
+          format: "png",
+        }, {
           headers: {
             "Content-Type": "application/json",
             Accept: "application/json",
             "X-API-KEY": PIXELCUT_API_KEY,
           },
+        });
+  
+        let result_url = response.data.result_url;
+  
+        // Paso 2: Generar fondo (si corresponde)
+        if (background) {
+          const responseBg = await axios.post("https://api.developer.pixelcut.ai/v1/generate-background", {
+            image_url: result_url,
+            image_transform: { scale: 0.6, x_center: 0.5, y_center: 0.5 },
+            scene: background,
+            prompt: "",
+            negative_prompt: "",
+          }, {
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+              "X-API-KEY": PIXELCUT_API_KEY,
+            },
+          });
+  
+          result_url = responseBg.data.result_url;
         }
-      );
-
-      imageToMotion = responseBg.data.result_url;
-    }
-    // Si no se quiere animación, devolver directamente la imagen
-    if (!animation) {
-      res.json({ result_url: imageToMotion, type: "image" });
-      return;
-    }
-
-    // Paso 3: Crear animación
-    const image_id_motion = await create_motion_fetch(imageToMotion);
-    const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
-    let processing = true;
-
-    while (processing) {
-      await delay(30000); // 30 segundos
-      const status = await get_status_media({ id: image_id_motion.data.id });
-      if (status.data.processing_status === "success") {
-        processing = false;
-      } else {
-        console.log("Procesando...");
+  
+        // Si no se quiere animación, guardar como imagen final
+        if (!animation) {
+          const filePath = path.join("content-generated", `${jobId}.json`);
+          await fs.outputJson(filePath, { result_url, type: "image" });
+          return;
+        }
+  
+        // Paso 3: Crear animación
+        const image_id_motion = await create_motion_fetch(result_url);
+  
+        const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
+        let processing = true;
+  
+        while (processing) {
+          await delay(30000);
+          const status = await get_status_media({ id: image_id_motion.data.id });
+          if (status.data.processing_status === "success") {
+            processing = false;
+          }
+        }
+  
+        const url_video_motion = await create_motion({ id: image_id_motion.data.id });
+  
+        if (url_video_motion) {
+          await fs.outputJson(path.join("content-generated", `${jobId}.json`), {
+            result_url: url_video_motion,
+            type: "video",
+          });
+        }
+      } catch (error) {
+        console.error("❌ Error en proceso async:", error);
+        await fs.outputJson(path.join("content-generated", `${jobId}.json`), {
+          error: true,
+          message: "Fallo al procesar la imagen.",
+        });
       }
-    }
+    })();
+  });
 
-    const url_video_motion = await create_motion({ id: image_id_motion.data.id });
-
-    if (url_video_motion) {
-      res.json({
-        result_url: url_video_motion,
-        type: "video",
-      });
-      return;
-    } else {
-      res
-        .status(400)
-        .json({ error: "No se encontró el resultado de la animación." });
-      return;
+  app.get("/job/:id", async (req, res) => {
+    const filePath = path.join("content-generated", `${req.params.id}.json`);
+    if (!fs.existsSync(filePath)) {
+      res.json({ status: "processing" });
+      return
     }
-  } catch (error) {
-    console.error("Error en el proceso:", error);
-    res.status(500).json({ error: "Ocurrió un error al procesar la imagen." });
-    return;
-  }
-});
+  
+    const data = await fs.readJson(filePath);
+  
+    if (data.error) {
+      res.status(500).json({ status: "error", message: data.message });
+      return
+    }
+  
+    res.json({ status: "done", ...data });
+  });
 
 export const create_motion = async ({ id }: { id: string }) => {
   const resp = await fetch(`https://api.vimmerse.net/media/${id}`, {
