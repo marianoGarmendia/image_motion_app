@@ -10,6 +10,7 @@ import fs from "fs-extra";
 // import fetch from "node-fetch"; // Si usas node-fetch en Node.js
 
 import { config } from "dotenv";
+import { url } from "inspector";
 
 config();
 const PIXELCUT_API_KEY = process.env.PIXELCUT_API_KEY; // Asegúrate de que la variable de entorno esté configurada correctamente
@@ -166,11 +167,11 @@ app.post("/remove-background", async (req, res) => {
       }
     }
 
-    const image_motion = await create_motion({ id: image_id_motion.data.id });
+    const url_video_motion = await create_motion({ id: image_id_motion.data.id });
 
-    if (image_motion?.data?.result?.length > 0) {
+    if (url_video_motion) {
       res.json({
-        result_url: image_motion.data.result[0].url,
+        result_url: url_video_motion,
         type: "video",
       });
       return;
@@ -196,9 +197,14 @@ export const create_motion = async ({ id }: { id: string }) => {
   });
 
   const data = await resp.text();
+  const dataJson = JSON.parse(data);
+  if(dataJson.data.result && dataJson.data.result.length > 0) {
+  const url_video =  dataJson.data.result[0]?.url 
+  return url_video;
 
-  console.dir(JSON.parse(data), { depth: null });
-  return JSON.parse(data);
+  }
+  return  null; // Si no hay resultado, devuelve null
+  
 };
 
 // La función asincrónica para crear la solicitud
@@ -243,7 +249,8 @@ export const create_motion_fetch = async (imageUrl: string) => {
 
     // Manejar la respuesta de la API
     const data = await apiResponse.json();
-
+    console.log("Respuesta de la API de vimmerse:", data);
+    
     return data;
   } catch (error) {
     console.error("Error al procesar la imagen:", error);
