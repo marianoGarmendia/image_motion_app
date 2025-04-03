@@ -126,9 +126,9 @@ app.post("/remove-background", async (req, res) => {
         if (background) {
           const responseBg = await axios.post("https://api.developer.pixelcut.ai/v1/generate-background", {
             image_url: result_url,
-            image_transform: { scale: 0.6, x_center: 0.5, y_center: 0.5 },
-            scene: background,
-            prompt: "",
+            image_transform: { scale: 0.6, x_center: 0.3, y_center: 0.5 },
+            scene: null,
+            prompt: "Add a solid, well-lit background that highlights the product. The background should be clean and professional, without distractions..",
             negative_prompt: "",
           }, {
             headers: {
@@ -140,7 +140,8 @@ app.post("/remove-background", async (req, res) => {
   
           result_url = responseBg.data.result_url;
         }
-  
+        console.log("URL de la imagen procesada:", result_url);
+        
         // Si no se quiere animación, guardar como imagen final
         if (!animation) {
           const filePath = path.join("content-generated", `${jobId}.json`);
