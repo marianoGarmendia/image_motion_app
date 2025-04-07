@@ -263,7 +263,7 @@ export const create_motion_fetch = async (imageUrl: string) => {
         Do not introduce any extra elements into the animation.
       `
     );
-    form.append("motion_type", "KlingAI");
+    form.append("motion_type", "Auto");
 
     // Configurar los encabezados de la solicitud
     const headers = new Headers({
