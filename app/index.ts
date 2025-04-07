@@ -131,7 +131,7 @@ app.post("/remove-background", async (req, res) => {
             image_transform: { scale: 0.8, x_center: 0.3, y_center: 0.5 },
             scene: null,
             prompt:
-              "Add a solid, smooth and homogeneous, well-lit background that highlights the product. The background should be clean and professional, without distractions..",
+              "Create a neutral, minimalist background that contrasts appropriately with the product color, using soft grays and whites to highlight the product without distracting attention.",
             negative_prompt: "",
           },
           {
@@ -248,27 +248,18 @@ export const create_motion_fetch = async (imageUrl: string) => {
       "prompt",
 
       `
-      Strict guidelines:
+      Apply a subtle zoom effect to [product] for 5 seconds, keeping it centered and unchanged. Conclude with a smooth fade-in for a seamless transition to the presentation.
+      Apply a 3D-style rotation of the product.
 
-        Do not add any text, logos, or trademarks — the scene must remain clean and professional.
+      Additional Tips:
 
-        Do not modify the product’s shape or form.
+      Maintain product integrity: Ensure the animation doesn't alter the product's appearance, shape, or color.
 
-        Do not change any visible characteristics, such as color or any written content on the product.
-
-        Always keep the product as the central focus, ensuring it visually stands out.
-
-        Do not introduce any extra elements into the animation.
-
-        Luego:
-      Animate an image of [product] placed against a neutral background. Apply a gentle zoom-in effect while keeping the product fixed in its original position to simulate a 3D perspective. Simultaneously, perform a smooth 90-degree rotation of the product.
-
-        Ensure the product is well lit, with soft lighting and subtle shadows that enhance depth and give a realistic 3D look. Emphasize the product’s key features without altering its original texture, proportions, colors, or details — maintain professional-grade visual integrity.
-
-        
+        Smooth transitions: Use smooth zoom-in and fade-out effects to create a professional and discreet animation.
+        Avoid abrupt changes or distractions.
       `
     );
-    form.append("motion_type", "KlingAI");
+    form.append("motion_type", "Auto");
 
     // Configurar los encabezados de la solicitud
     const headers = new Headers({
