@@ -246,11 +246,9 @@ export const create_motion_fetch = async (imageUrl: string) => {
     // Agregar otros datos al FormData
     form.append(
       "prompt",
-      `Animate an image of [product] placed against a neutral background. Apply a gentle zoom-in effect while keeping the product fixed in its original position to simulate a 3D perspective. Simultaneously, perform a smooth 90-degree rotation of the product.
 
-        Ensure the product is well lit, with soft lighting and subtle shadows that enhance depth and give a realistic 3D look. Emphasize the product’s key features without altering its original texture, proportions, colors, or details — maintain professional-grade visual integrity.
-
-        Strict guidelines:
+      `
+      Strict guidelines:
 
         Do not add any text, logos, or trademarks — the scene must remain clean and professional.
 
@@ -261,9 +259,16 @@ export const create_motion_fetch = async (imageUrl: string) => {
         Always keep the product as the central focus, ensuring it visually stands out.
 
         Do not introduce any extra elements into the animation.
+
+        Luego:
+      Animate an image of [product] placed against a neutral background. Apply a gentle zoom-in effect while keeping the product fixed in its original position to simulate a 3D perspective. Simultaneously, perform a smooth 90-degree rotation of the product.
+
+        Ensure the product is well lit, with soft lighting and subtle shadows that enhance depth and give a realistic 3D look. Emphasize the product’s key features without altering its original texture, proportions, colors, or details — maintain professional-grade visual integrity.
+
+        
       `
     );
-    form.append("motion_type", "Auto");
+    form.append("motion_type", "KlingAI");
 
     // Configurar los encabezados de la solicitud
     const headers = new Headers({
