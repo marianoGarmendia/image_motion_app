@@ -168,6 +168,8 @@ app.post("/remove-background", async (req, res) => {
 
         const status = await get_status_media({ id: image_id_motion.data.id });
         if (status.data.processing_status === "success") {
+          console.log(status);
+          
           console.log("✅ Proceso de animación completado.");
 
           processing = false;
@@ -278,7 +280,7 @@ export const create_motion_fetch = async (imageUrl: string) => {
     const data = await apiResponse.json();
     
     console.log("Respuesta de la API de vimmerse:");
-    console.log(data);
+ 
 
     return data;
   } catch (error) {
