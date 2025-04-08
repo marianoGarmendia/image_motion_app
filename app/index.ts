@@ -260,6 +260,7 @@ export const create_motion_fetch = async (imageUrl: string) => {
       `
     );
     form.append("motion_type", "Auto");
+    form.append("aspect_ratio", "16:9");
 
     // Configurar los encabezados de la solicitud
     const headers = new Headers({
@@ -275,7 +276,9 @@ export const create_motion_fetch = async (imageUrl: string) => {
 
     // Manejar la respuesta de la API
     const data = await apiResponse.json();
+    
     console.log("Respuesta de la API de vimmerse:");
+    console.log(data);
 
     return data;
   } catch (error) {
