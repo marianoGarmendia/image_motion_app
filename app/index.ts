@@ -128,7 +128,7 @@ app.post("/remove-background", async (req, res) => {
           "https://api.developer.pixelcut.ai/v1/generate-background",
           {
             image_url: result_url,
-            image_transform: { scale: 0.8, x_center: 0.3, y_center: 0.5 },
+            image_transform: { scale: 0.8, x_center: 0.5, y_center: 0.5 },
             scene: null,
             prompt:
               "Create a neutral, minimalist background that contrasts appropriately with the product color, using soft grays and whites to highlight the product without distracting attention.",
@@ -248,15 +248,15 @@ export const create_motion_fetch = async (imageUrl: string) => {
       "prompt",
 
       `
-      Apply a subtle zoom effect to [product] for 5 seconds, keeping it centered and unchanged. Conclude with a smooth fade-in for a seamless transition to the presentation.
-      Apply a 3D-style rotation of the product.
+    Rotate the product 120 degrees over 5 seconds, keeping it centered and unaltered. Conclude with a smooth fade-in transition for seamless integration into the presentation."​
 
-      Additional Tips:
+    Additional Tips:
 
-      Maintain product integrity: Ensure the animation doesn't alter the product's appearance, shape, or color.
+  Maintain Product Integrity: Ensure the animation does not modify the product's appearance, shape, or color.​
 
-        Smooth transitions: Use smooth zoom-in and fade-out effects to create a professional and discreet animation.
-        Avoid abrupt changes or distractions.
+  Smooth Transitions: Utilize gentle rotation and fade-in effects to create a professional and unobtrusive animation.​
+
+  Avoid Abrupt Changes or Distractions: Keep the focus on the product by avoiding sudden movements or additional elements that may divert attention.
       `
     );
     form.append("motion_type", "Auto");
