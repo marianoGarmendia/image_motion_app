@@ -24,8 +24,12 @@ const __dirname = dirname(__filename);
 const uploadDir = path.join(process.cwd(), "upload-images");
 const contentDir = path.join(process.cwd(), "content-generated");
 const tempDir = path.join(__dirname, "../temp");
+const uploadImageResize = path.join(process.cwd(), "images-to-resize");
+
 
 fs.ensureDirSync("upload-images"); // crea la carpeta si no existe
+fs.ensureDirSync("images-to-resize"); // crea la carpeta si no existe
+fs.ensureDirSync("resized-images"); // crea la carpeta si no existe
 fs.ensureDirSync("content-generated"); // crea la carpeta si no existe
 fs.ensureDirSync("temp"); // crea la carpeta si no existe
 
@@ -66,8 +70,11 @@ app.use(express.urlencoded({ extended: true }));
 // app.options('*', cors(corsOptions));  // Permitir el preflight para todos los métodos
 
 // Servir archivos estáticos (por ejemplo, imágenes)
+app.use("/images-resizes", express.static(uploadImageResize));
 app.use("/images", express.static(uploadDir));
 app.use("/content-generated", express.static(contentDir));
+
+app.post("/images-resizes", upload.single("image"), async (req, res) => {})
 
 app.post("/upload-image", upload.single("image"), async (req, res) => {
   if (!req.file) {
