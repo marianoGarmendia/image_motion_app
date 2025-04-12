@@ -3,3 +3,8 @@ node_modules
 response-vimmerse.ts
 
 images-resize*
+# LangGraph API
+.langgraph_api
+
+three-js.ts*
+

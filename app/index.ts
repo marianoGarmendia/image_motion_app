@@ -6,12 +6,16 @@ import { fileURLToPath } from "url";
 import path, { dirname } from "path";
 import fs from "fs-extra";
 import { v4 as uuidv4 } from "uuid";
+import { edit_image_frame } from "./edit-image-frame.js";
+import { create_prompt_animation } from "./llm/openai.js";
+import {describeImageWithFetch} from "./image-prompt/index.ts";
+import {imageUrlToBase64} from "./image-prompt/convert-base64.js";
 // import { get_status_media } from "./pixelcut-api.js";
 // import FormData from "form-data"; // Asegúrate de instalar form-data si no lo tienes ya
 // import fetch from "node-fetch"; // Si usas node-fetch en Node.js
 
 import { config } from "dotenv";
-import { url } from "inspector";
+
 
 config();
 const PIXELCUT_API_KEY = process.env.PIXELCUT_API_KEY; // Asegúrate de que la variable de entorno esté configurada correctamente
@@ -23,8 +27,8 @@ const __dirname = dirname(__filename);
 
 const uploadDir = path.join(process.cwd(), "upload-images");
 const contentDir = path.join(process.cwd(), "content-generated");
-const tempDir = path.join(__dirname, "../temp");
-const uploadImageResize = path.join(process.cwd(), "images-to-resize");
+const tempDir = path.join(__dirname, "temp");
+const uploadImageToResize = path.join(process.cwd(), "images-to-resize");
 
 
 fs.ensureDirSync("upload-images"); // crea la carpeta si no existe
@@ -34,7 +38,7 @@ fs.ensureDirSync("content-generated"); // crea la carpeta si no existe
 fs.ensureDirSync("temp"); // crea la carpeta si no existe
 
 // 2️⃣ Configuración de almacenamiento con Multer
-const storage = multer.diskStorage({
+const storageUpload = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, uploadDir); // destino donde se guarda la imagen
   },
@@ -45,8 +49,22 @@ const storage = multer.diskStorage({
   },
 });
 
+// Storage para imágenes a redimensionar
+const storageResize = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, uploadImageToResize);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    const ext = path.extname(file.originalname);
+    cb(null, file.fieldname + "-" + uniqueSuffix + ext);
+  },
+});
+
+
 // 3️⃣ Instanciamos Multer con la config de almacenamiento
-const upload = multer({ storage });
+const upload = multer({ storage: storageUpload });
+const uploadResize = multer({ storage: storageResize });
 
 // Habilitar CORS correctamente para solicitudes preflight
 const corsOptions = {
@@ -70,11 +88,34 @@ app.use(express.urlencoded({ extended: true }));
 // app.options('*', cors(corsOptions));  // Permitir el preflight para todos los métodos
 
 // Servir archivos estáticos (por ejemplo, imágenes)
-app.use("/images-resizes", express.static(uploadImageResize));
+app.use("/images-resizes", express.static(uploadImageToResize));
 app.use("/images", express.static(uploadDir));
 app.use("/content-generated", express.static(contentDir));
 
-app.post("/images-resizes", upload.single("image"), async (req, res) => {})
+// Imagen pra redimensionar
+app.post("/images-resizes", uploadResize.single("image"), async (req, res) => {
+  if (!req.file) {
+    res.status(400).json({ error: "No se envió ninguna imagen." });
+    return
+  }
+
+  console.log("Imagen recibida para redimensionar:", req.file.filename);
+  const fileName = req.file.filename;
+  const originalPath = uploadImageToResize; // carpeta "images-to-resize"
+
+
+  // Llamar  la funcion para redimensionar la imagen
+  edit_image_frame({imagePath:`/images-resizes/${fileName}`, outputPath: fileName, outputSize: "1920x400"})
+
+   // Ahora eliminás la original
+  //  await deleteOriginalImage(filename, originalPath);
+
+  res.json({
+    message: "Imagen recibida correctamente para redimensionar.",
+    filename: fileName,
+    path: `/images-resizes/${fileName}`
+  });
+});
 
 app.post("/upload-image", upload.single("image"), async (req, res) => {
   if (!req.file) {
@@ -83,13 +124,18 @@ app.post("/upload-image", upload.single("image"), async (req, res) => {
   }
 
   console.log("Imagen recibida:", req.file.filename);
+  const fileName = req.file.filename;
+  const originalPath = uploadDir; // carpeta "upload-images"
+  // await generateVideoFromImage(fileName);
+   // Ahora eliminás la original
+  //  await deleteOriginalImage(filename, originalPath);
 
   res.json({
-    id: req.file.filename,
+    id: fileName,
 
     message: "Imagen subida exitosamente.",
-    fileName: req.file.filename,
-    url: `/images/${req.file.filename}`,
+    fileName: fileName,
+    url: `/images/${fileName}`,
   });
 });
 
@@ -105,11 +151,11 @@ app.post("/remove-background", async (req, res) => {
 
   // Devolver inmediatamente al frontend
   res.json({ jobId, status: "processing" });
+  const imageUrl = `https://imagemotionapp-production.up.railway.app/images/${fileName}`;
 
   // Procesar en segundo plano
   (async () => {
     try {
-      const imageUrl = `https://imagemotionapp-production.up.railway.app/images/${fileName}`;
 
       // Paso 1: Remover fondo
       const response = await axios.post(
@@ -129,16 +175,17 @@ app.post("/remove-background", async (req, res) => {
 
       let result_url = response.data.result_url;
 
+      
       // Paso 2: Generar fondo (si corresponde)
       if (background) {
         const responseBg = await axios.post(
           "https://api.developer.pixelcut.ai/v1/generate-background",
           {
-            image_url: result_url,
+            image_url: imageUrl,
             image_transform: { scale: 0.8, x_center: 0.5, y_center: 0.5 },
             scene: null,
             prompt:
-              "Create a neutral, minimalist background that contrasts appropriately with the product color, using soft grays and whites to highlight the product without distracting attention.",
+              "Agregale un fondo liso blanco , que contraste con el color del producto, y genera una sombra debajo del prodcuto  como si estuviese flotando",
             negative_prompt: "",
           },
           {
@@ -161,8 +208,19 @@ app.post("/remove-background", async (req, res) => {
         return;
       }
 
+      // Obtener el prompt para crear la animación
+      // Obtener la descirpcion de la imagen
+      
+        const base64Image = await imageUrlToBase64(result_url);
+        const imageDescription = await describeImageWithFetch({base64Image:base64Image});
+        const prompt_animation = (await create_prompt_animation(imageDescription)).toString()
+        console.log("Prompt para la animación:", prompt_animation);
+
+     
+
+
       // Paso 3: Crear animación
-      const image_id_motion = await create_motion_fetch(result_url);
+      const image_id_motion = await create_motion_fetch(result_url, prompt_animation);
 
       const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
       let processing = true;
@@ -238,7 +296,7 @@ export const create_motion = async ({ id }: { id: string }) => {
 };
 
 // La función asincrónica para crear la solicitud
-export const create_motion_fetch = async (imageUrl: string) => {
+export const create_motion_fetch = async (imageUrl: string, prompt_animation: string) => {
   const form = new FormData(); // Crear un FormData para enviar los datos
 
   try {
@@ -256,20 +314,10 @@ export const create_motion_fetch = async (imageUrl: string) => {
     form.append(
       "prompt",
 
-      `
-    Rotate the product 120 degrees over 5 seconds, keeping it centered and unaltered. Conclude with a smooth fade-in transition for seamless integration into the presentation."​
-
-    Additional Tips:
-
-  Maintain Product Integrity: Ensure the animation does not modify the product's appearance, shape, or color.​
-
-  Smooth Transitions: Utilize gentle rotation and fade-in effects to create a professional and unobtrusive animation.​
-
-  Avoid Abrupt Changes or Distractions: Keep the focus on the product by avoiding sudden movements or additional elements that may divert attention.
-      `
+     prompt_animation
     );
-    form.append("motion_type", "Auto");
-    form.append("aspect_ratio", "16:9");
+    form.append("motion_type", "KlingAI");
+    // form.append("aspect_ratio", "");
 
     // Configurar los encabezados de la solicitud
     const headers = new Headers({
@@ -358,3 +406,14 @@ app.listen(port, () => {
   }
 }
 */
+
+async function deleteOriginalImage(filename:string, folderPath:string) {
+  const filePath = path.join(folderPath, filename);
+
+  try {
+    await fs.unlink(filePath);
+    console.log(`✅ Imagen original eliminada: ${filePath}`);
+  } catch (error) {
+    console.error(`❌ Error al eliminar la imagen original:`, error);
+  }
+}
