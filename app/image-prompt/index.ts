@@ -1,8 +1,9 @@
 import { config } from 'dotenv';
+import nodeFetch from 'node-fetch';
 
 config();
 
-const fetch = globalThis.fetch || (await import('node-fetch')).default;
+const fetch = globalThis.fetch || nodeFetch;
 import fs from 'fs';
 
 /**
