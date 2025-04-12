@@ -1,0 +1,2 @@
+[phases.setup]
+nixpkgs = ['python3', 'pkg-config', 'libGL', 'libX11', 'libxext', 'libxrender', 'libxfixes', 'libxi', 'libxtst', 'mesa']
