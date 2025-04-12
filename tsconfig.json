@@ -1,6 +1,7 @@
 {
     "compilerOptions": {
-      //  "noEmit": true, // Optional - see note below
+       "noEmit": true, // Optional - see note below
+
        "lib": ["ESNext", "DOM"],
        "outDir": "./dist",
        "rootDir": "./app",
