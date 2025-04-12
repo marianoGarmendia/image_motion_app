@@ -1,8 +1,10 @@
 // Compatible con Node.js 18+ o si usás node-fetch
 import { config } from 'dotenv';
+import nodeFetch from 'node-fetch';
+
 config();
 
-const fetch = globalThis.fetch || (await import('node-fetch')).default;
+const fetch = globalThis.fetch || nodeFetch;
 
 /**
  * Descarga una imagen desde una URL y la convierte a base64.
