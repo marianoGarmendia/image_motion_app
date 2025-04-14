@@ -15,6 +15,7 @@ import {imageUrlToBase64} from "./image-prompt/convert-base64.js";
 // import fetch from "node-fetch"; // Si usas node-fetch en Node.js
 
 import { config } from "dotenv";
+import { log } from "util";
 
 
 config();
@@ -142,6 +143,11 @@ app.post("/upload-image", upload.single("image"), async (req, res) => {
 app.post("/remove-background", async (req, res) => {
   const { fileName, background, animation } = req.body;
 
+  console.log("Eliminar fondo de la imagen:", fileName);
+  console.log("background", background);
+  console.log("animation", animation);
+  
+
   if (!fileName) {
     res.status(400).json({ error: "El nombre del archivo es requerido" });
     return;
@@ -152,28 +158,30 @@ app.post("/remove-background", async (req, res) => {
   // Devolver inmediatamente al frontend
   res.json({ jobId, status: "processing" });
   const imageUrl = `https://imagemotionapp-production.up.railway.app/images/${fileName}`;
+  const imageURLdev = `https://72jdmlb6-3500.brs.devtunnels.ms/images/${fileName}`;
 
   // Procesar en segundo plano
   (async () => {
     try {
 
-      // Paso 1: Remover fondo
-      const response = await axios.post(
-        "https://api.developer.pixelcut.ai/v1/remove-background",
-        {
-          image_url: imageUrl,
-          format: "png",
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-            "X-API-KEY": PIXELCUT_API_KEY,
-          },
-        }
-      );
+      // // Paso 1: Remover fondo
+      // const response = await axios.post(
+      //   "https://api.developer.pixelcut.ai/v1/remove-background",
+      //   {
+      //     image_url: imageUrl,
+      //     format: "png",
+      //   },
+      //   {
+      //     headers: {
+      //       "Content-Type": "application/json",
+      //       Accept: "application/json",
+      //       "X-API-KEY": PIXELCUT_API_KEY,
+      //     },
+      //   }
+      // );
 
-      let result_url = response.data.result_url;
+      // let result_url = response.data.result_url;
+      let result_url = ""; // Cambia esto para usar la URL de la imagen original
 
       
       // Paso 2: Generar fondo (si corresponde)
@@ -181,12 +189,12 @@ app.post("/remove-background", async (req, res) => {
         const responseBg = await axios.post(
           "https://api.developer.pixelcut.ai/v1/generate-background",
           {
-            image_url: imageUrl,
+            image_url: imageURLdev,
             image_transform: { scale: 0.8, x_center: 0.5, y_center: 0.5 },
             scene: null,
             prompt:
-              "Agregale un fondo liso blanco , que contraste con el color del producto, y genera una sombra debajo del prodcuto  como si estuviese flotando",
-            negative_prompt: "",
+              "Background neutro liso, blanco, haz una leve sombra del producto, sin marcas ni logos",
+            negative_prompt: "paisajes, personas, animales, objetos, marcas, logos",
           },
           {
             headers: {
@@ -196,10 +204,11 @@ app.post("/remove-background", async (req, res) => {
             },
           }
         );
-
-        result_url = responseBg.data.result_url;
+        console.log("pixelcut response", responseBg.data.result_url);
+        
+       result_url = responseBg.data.result_url;
+       console.log("URL de la imagen procesada:", result_url);
       }
-      console.log("URL de la imagen procesada:", result_url);
 
       // Si no se quiere animación, guardar como imagen final
       if (!animation) {
@@ -263,6 +272,8 @@ app.post("/remove-background", async (req, res) => {
 
 app.get("/job/:id", async (req, res) => {
   const filePath = path.join("content-generated", `${req.params.id}.json`);
+  console.log("jobId", req.params.id);
+  
   if (!fs.existsSync(filePath)) {
     res.json({ status: "processing" });
     return;

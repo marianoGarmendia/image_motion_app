@@ -1,4 +1,5 @@
 // Compatible con Node.js 18+ o si usás node-fetch
+import { log } from 'console';
 import { config } from 'dotenv';
 import nodeFetch from 'node-fetch';
 
@@ -13,6 +14,8 @@ const fetch = globalThis.fetch || nodeFetch;
  * @returns String base64 con prefijo data:...
  */
 export async function imageUrlToBase64(imageUrl: string, mimeType = 'image/jpeg'): Promise<string> {
+  console.log('Convirtiendo imagen a base64...');
+  
   try {
     const response = await fetch(imageUrl);
 

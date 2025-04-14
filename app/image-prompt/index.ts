@@ -23,6 +23,8 @@ export async function describeImageWithFetch({
   prompt?: string;
   lang?: string;
 }): Promise<string> {
+  console.log('Enviando imagen a ImageDescriber.app...');
+  
   const response = await fetch('https://api.imagedescriber.app/api/v1/generate_content', {
     method: 'POST',
     headers: {
@@ -42,7 +44,9 @@ export async function describeImageWithFetch({
   }
 
   const data = await response.json();
-  return data.content;
+  console.log('Respuesta de la descripcion de la imagen:', data);
+  
+  return data.data.content;
 }
 
 /*
