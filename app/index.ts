@@ -189,7 +189,7 @@ app.post("/remove-background", async (req, res) => {
         const responseBg = await axios.post(
           "https://api.developer.pixelcut.ai/v1/generate-background",
           {
-            image_url: imageURLdev,
+            image_url: imageUrl,
             image_transform: { scale: 0.8, x_center: 0.5, y_center: 0.5 },
             scene: null,
             prompt:
